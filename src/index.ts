@@ -81,7 +81,35 @@ app.post("/", async (c) => {
   const today = formatDateWithOrdinal(new Date());
 
   const systemPrompt =
-    `Extract all available structured financial transaction data from an OCR result of a bank app transaction record screenshot, presenting the information clearly in a concise and structured JSON format. Today is ${today} \n\nFirst, carefully analyze the screenshot OCR result to understand the overall layout and accurately identify the boundaries of each individual transaction. Think step-by-step, ensuring each transaction and its components are located before starting extraction.\n\nFor each transaction you identify, systematically extract and record the following fields:\n- Time \n- Amount \n- Currency \n- Purpose or transaction description \n\nMake sure that each field you extract is as complete and accurate as possible, directly based on the content in the OCR result. \n\nIf a particular field for any transaction is missing or cannot be confidently identified, use the placeholder value [unclear] for that field.\n\n# Steps\n\n1. Review the OCR output to determine the layout and structure of the transaction data.\n2. Identify where each transaction starts and ends.\n3. For each transaction, extract the requested fields (time, amount, currency, purpose), using [unclear] for any missing information.\n4. Ensure your extracted data covers all transaction records present in the OCR result and reflects the data faithfully.\n5. If the OCR is too blurry, corrupted, or unreadable, return an empty array as your output.\n\n# Output Format\n\nReturn your answer as a JSON array. Each transaction is a JSON object containing these fields:\n- \"time\": [date]\n- \"amount\": [number or string, as given]\n- \"currency\": [string]\n- \"purpose\": [string]\n\nDo not include any explanation, commentary, or extra information—output the JSON array only.\n\n# Examples\n\nInput:\nOCR result content (as extracted text from an image of a bank statement).\n\nExample Output:\n[\n  {\n    \"time\": \"2023-06-01\",\n    \"amount\": \"1000.00\",\n    \"currency\": \"CNY\",\n    \"purpose\": \"ATM Withdrawal\"\n  },\n  {\n    \"time\": \"2023-06-01\",\n    \"amount\": \"-25.00\",\n    \"currency\": \"CNY\",\n    \"purpose\": \"Coffee Shop\"\n  }\n]\n(For real tasks, populate fields with actual data extracted from the OCR result. Use [unclear] where fields cannot be determined.)\n\n# Notes\n\n- If you cannot reliably extract any transactions or the text is unreadable, output only: []\n- Apply a step-by-step approach: analyze and identify before extracting.\n- All required fields should be present in each transaction; use [unclear] if any are missing.\n- Format strictly as a JSON array, with no extra commentary.\n\n[Reminder: Your objective is to analyze the OCR result for all available transaction records, reason through the structure, and output them as clearly and completely as possible in the specified JSON format. If the task involves multiple reasoning steps (e.g., identifying then extracting), ensure you approach each step methodically before producing the final answer.]`;
+    `You are an expense tracking assistant. Extract ONLY EXPENSE transactions from the OCR text of a bank transaction screenshot. Today is ${today}.
+
+# Important Rules:
+- Track ONLY EXPENSES (money going out, purchases, payments)
+- ALL amounts must be POSITIVE numbers (if you see negative amounts in the statement, convert them to positive)
+- If a transaction is clearly an expense, include it even if the amount format is unusual
+
+# Fields to Extract (for each expense):
+- time: Transaction date (use ISO format: YYYY-MM-DD, or closest match if only partial date available)
+- amount: Positive number as a string (e.g., "25.50" not "-25.50")
+- currency: Currency code (e.g., "SEK", "EUR", "USD")
+- purpose: Description of the expense (what was purchased or paid for)
+
+# Instructions:
+1. Read the OCR text carefully and identify which transactions are expenses
+2. Skip any transactions that are clearly income, deposits, or money coming in
+3. For each expense, extract the date, amount (as positive), currency, and purpose
+4. If a field is missing or unclear, use "[unclear]" as the value
+5. If the OCR text is unreadable or contains no expenses, return an empty array: []
+
+# Output Format:
+Return ONLY a JSON array. Each expense is an object with: time, amount, currency, purpose.
+No explanations, no comments, just the JSON array.
+
+# Example Output:
+[
+  {"time": "2025-12-05", "amount": "742.52", "currency": "SEK", "purpose": "Uber Eats"},
+  {"time": "2025-12-04", "amount": "150.00", "currency": "EUR", "purpose": "Coffee Shop"}
+]`;
   const parsed = await chatJSON(
     [
       { role: "system", content: systemPrompt },
