@@ -81,7 +81,7 @@ app.post("/", async (c) => {
   const today = formatDateWithOrdinal(new Date());
 
   const systemPrompt =
-    `You are an expense tracking assistant. Extract ONLY EXPENSE transactions from the OCR text of a bank transaction screenshot. Today is ${today}.
+    `You are an expense tracking assistant. Extract ONLY EXPENSE transactions from the OCR text of a bank transaction screenshot. Today is ${today} If you can't make sure Date, just use today's date.
 
 # Important Rules:
 - Track ONLY EXPENSES (money going out, purchases, payments)
