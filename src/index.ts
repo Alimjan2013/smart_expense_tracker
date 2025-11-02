@@ -3,7 +3,7 @@ import { Hono } from "hono";
 // ------------ AI (raw HTTP) CONFIG ------------
 const AI_BASE_URL =
   process.env.AI_GATEWAY_BASE_URL || "https://ai-gateway.vercel.sh/v1"; // no trailing slash
-const AI_API_KEY = process.env.AI_GATEWAY_API_KEY || process.env.OPENAI_API_KEY; // fallback
+const AI_API_KEY = process.env.AI_GATEWAY_API_KEY  // fallback
 if (!AI_API_KEY)
   console.warn("AI gateway API key missing (AI_GATEWAY_API_KEY)");
 
@@ -26,7 +26,6 @@ async function chatJSON(messages: ChatMessage[], model: string) {
       model,
       messages,
       stream: false,
-      response_format: { type: "json_object" },
     }),
   });
   if (!res.ok) {
@@ -57,22 +56,38 @@ app.get("/", async (c) => {
       { role: "system", content: systemPrompt },
       { role: "user", content: userText },
     ],
-    "openai/gpt-4o-mini"
+    "openai/gpt-5-mini"
   );
   return c.json(parsed);
 });
 
+function formatDateWithOrdinal(date: Date): string {
+  const day = date.getDate();
+  const ordinal = 
+    day === 1 || day === 21 || day === 31 ? 'st' :
+    day === 2 || day === 22 ? 'nd' :
+    day === 3 || day === 23 ? 'rd' : 'th';
+  
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
+  
+  return `${day}${ordinal} ${month} ${year}`;
+}
+
 // POST OCR processing
 app.post("/", async (c) => {
   const { text } = await c.req.json();
+  const today = formatDateWithOrdinal(new Date());
+
   const systemPrompt =
-    "Extract all available structured financial transaction data from an OCR result of a bank app transaction record screenshot, presenting the information clearly in a concise and structured JSON format.\n\nFirst, carefully analyze the screenshot OCR result to understand the overall layout and accurately identify the boundaries of each individual transaction. Think step-by-step, ensuring each transaction and its components are located before starting extraction.\n\nFor each transaction you identify, systematically extract and record the following fields:\n- Time \n- Amount \n- Currency \n- Purpose or transaction description \n\nMake sure that each field you extract is as complete and accurate as possible, directly based on the content in the OCR result. \n\nIf a particular field for any transaction is missing or cannot be confidently identified, use the placeholder value [unclear] for that field.\n\n# Steps\n\n1. Review the OCR output to determine the layout and structure of the transaction data.\n2. Identify where each transaction starts and ends.\n3. For each transaction, extract the requested fields (time, amount, currency, purpose), using [unclear] for any missing information.\n4. Ensure your extracted data covers all transaction records present in the OCR result and reflects the data faithfully.\n5. If the OCR is too blurry, corrupted, or unreadable, return an empty array as your output.\n\n# Output Format\n\nReturn your answer as a JSON array. Each transaction is a JSON object containing these fields:\n- \"time\": [date]\n- \"amount\": [number or string, as given]\n- \"currency\": [string]\n- \"purpose\": [string]\n\nDo not include any explanation, commentary, or extra information—output the JSON array only.\n\n# Examples\n\nInput:\nOCR result content (as extracted text from an image of a bank statement).\n\nExample Output:\n[\n  {\n    \"time\": \"2023-06-01\",\n    \"amount\": \"1000.00\",\n    \"currency\": \"CNY\",\n    \"purpose\": \"ATM Withdrawal\"\n  },\n  {\n    \"time\": \"2023-06-01\",\n    \"amount\": \"-25.00\",\n    \"currency\": \"CNY\",\n    \"purpose\": \"Coffee Shop\"\n  }\n]\n(For real tasks, populate fields with actual data extracted from the OCR result. Use [unclear] where fields cannot be determined.)\n\n# Notes\n\n- If you cannot reliably extract any transactions or the text is unreadable, output only: []\n- Apply a step-by-step approach: analyze and identify before extracting.\n- All required fields should be present in each transaction; use [unclear] if any are missing.\n- Format strictly as a JSON array, with no extra commentary.\n\n[Reminder: Your objective is to analyze the OCR result for all available transaction records, reason through the structure, and output them as clearly and completely as possible in the specified JSON format. If the task involves multiple reasoning steps (e.g., identifying then extracting), ensure you approach each step methodically before producing the final answer.]";
+    `Extract all available structured financial transaction data from an OCR result of a bank app transaction record screenshot, presenting the information clearly in a concise and structured JSON format. Today is ${today} \n\nFirst, carefully analyze the screenshot OCR result to understand the overall layout and accurately identify the boundaries of each individual transaction. Think step-by-step, ensuring each transaction and its components are located before starting extraction.\n\nFor each transaction you identify, systematically extract and record the following fields:\n- Time \n- Amount \n- Currency \n- Purpose or transaction description \n\nMake sure that each field you extract is as complete and accurate as possible, directly based on the content in the OCR result. \n\nIf a particular field for any transaction is missing or cannot be confidently identified, use the placeholder value [unclear] for that field.\n\n# Steps\n\n1. Review the OCR output to determine the layout and structure of the transaction data.\n2. Identify where each transaction starts and ends.\n3. For each transaction, extract the requested fields (time, amount, currency, purpose), using [unclear] for any missing information.\n4. Ensure your extracted data covers all transaction records present in the OCR result and reflects the data faithfully.\n5. If the OCR is too blurry, corrupted, or unreadable, return an empty array as your output.\n\n# Output Format\n\nReturn your answer as a JSON array. Each transaction is a JSON object containing these fields:\n- \"time\": [date]\n- \"amount\": [number or string, as given]\n- \"currency\": [string]\n- \"purpose\": [string]\n\nDo not include any explanation, commentary, or extra information—output the JSON array only.\n\n# Examples\n\nInput:\nOCR result content (as extracted text from an image of a bank statement).\n\nExample Output:\n[\n  {\n    \"time\": \"2023-06-01\",\n    \"amount\": \"1000.00\",\n    \"currency\": \"CNY\",\n    \"purpose\": \"ATM Withdrawal\"\n  },\n  {\n    \"time\": \"2023-06-01\",\n    \"amount\": \"-25.00\",\n    \"currency\": \"CNY\",\n    \"purpose\": \"Coffee Shop\"\n  }\n]\n(For real tasks, populate fields with actual data extracted from the OCR result. Use [unclear] where fields cannot be determined.)\n\n# Notes\n\n- If you cannot reliably extract any transactions or the text is unreadable, output only: []\n- Apply a step-by-step approach: analyze and identify before extracting.\n- All required fields should be present in each transaction; use [unclear] if any are missing.\n- Format strictly as a JSON array, with no extra commentary.\n\n[Reminder: Your objective is to analyze the OCR result for all available transaction records, reason through the structure, and output them as clearly and completely as possible in the specified JSON format. If the task involves multiple reasoning steps (e.g., identifying then extracting), ensure you approach each step methodically before producing the final answer.]`;
   const parsed = await chatJSON(
     [
       { role: "system", content: systemPrompt },
       { role: "user", content: text },
     ],
-    "openai/gpt-4o-mini"
+    "openai/gpt-5-mini"
   );
 
   let transactions: any[] = [];
