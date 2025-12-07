@@ -77,7 +77,7 @@ function formatDateWithOrdinal(date: Date): string {
 
 // POST OCR processing
 app.post("/", async (c) => {
-  const { text, SharedBy } = await c.req.json();
+  const { text, SharedBy, notionToken, databaseId } = await c.req.json();
   const sharedBy = Math.max(1, Number(SharedBy) || 1);
   const today = formatDateWithOrdinal(new Date());
 
@@ -142,7 +142,7 @@ No explanations, no comments, just the JSON array.
 
   let notion: any = null;
   try {
-    notion = await uploadTransactionsToNotion(transactions, sharedBy);
+    notion = await uploadTransactionsToNotion(transactions, sharedBy, notionToken, databaseId);
   } catch (e) {
     notion = { error: (e as Error).message };
   }
@@ -163,13 +163,13 @@ interface TransactionRecord {
 
 async function uploadTransactionsToNotion(
   transactions: TransactionRecord | TransactionRecord[],
-  sharedBy: number = 1
+  sharedBy: number = 1,
+  notionToken?: string,
+  databaseId?: string
 ) {
-  const NOTION_TOKEN = process.env.notion_API_KEY || process.env.NOTION_API_KEY;
-  const DATABASE_ID = process.env.Database_ID || process.env.DATABASE_ID;
-  if (!NOTION_TOKEN)
-    throw new Error("Missing env notion_API_KEY / NOTION_API_KEY");
-  if (!DATABASE_ID) throw new Error("Missing env Database_ID / DATABASE_ID");
+  if (!notionToken)
+    throw new Error("Missing notionToken in request body");
+  if (!databaseId) throw new Error("Missing databaseId in request body");
   const list = Array.isArray(transactions) ? transactions : [transactions];
   if (!list.length) return { message: "No transactions" };
   const results: { success: boolean; id?: string; error?: string }[] = [];
@@ -186,7 +186,7 @@ async function uploadTransactionsToNotion(
       }
       const dateStr = extractISODate(raw.time || raw.date);
       const payload: any = {
-        parent: { database_id: DATABASE_ID },
+        parent: { database_id: databaseId },
         properties: {
           Name: { title: [{ text: { content: name.slice(0, 2000) } }] },
         },
@@ -201,7 +201,7 @@ async function uploadTransactionsToNotion(
       const notionResponse = await fetch("https://api.notion.com/v1/pages", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${NOTION_TOKEN}`,
+          Authorization: `Bearer ${notionToken}`,
           "Content-Type": "application/json",
           "Notion-Version": "2022-06-28",
         },
