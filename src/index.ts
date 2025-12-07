@@ -93,7 +93,7 @@ app.post("/", async (c) => {
 - amount: Positive number as a string (e.g., "25.50" not "-25.50")
 - currency: Currency code (e.g., "SEK", "EUR", "USD")
 - purpose: Store/merchant name with category (e.g., "K market Groceries", "Uber Eats Food Delivery", "Shell Gas Station", "Starbucks Coffee")
-- notes: Additional details in English if available (e.g., location, order details, item description). Do NOT include card/payment details.
+- notes: Additional details in English if available (e.g., location, order details, item description). Do NOT include card/payment details. if transaction is not in english, translate it to english .
 
 # Instructions:
 1. Read the OCR text carefully and identify which transactions are expenses
