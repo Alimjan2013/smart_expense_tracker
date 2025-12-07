@@ -6,7 +6,6 @@
     "openai": "^5.15.0"
   },
   "scripts": {
-    "dev": "bun run --bun src/index.ts",
-    "build": "bun run --bun src/index.ts"
+    "dev": "bun run --hot src/index.ts"
   }
 }
