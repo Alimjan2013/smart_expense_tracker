@@ -77,7 +77,8 @@ function formatDateWithOrdinal(date: Date): string {
 
 // POST OCR processing
 app.post("/", async (c) => {
-  const { text } = await c.req.json();
+  const { text, SharedBy } = await c.req.json();
+  const sharedBy = Math.max(1, Number(SharedBy) || 1);
   const today = formatDateWithOrdinal(new Date());
 
   const systemPrompt =
@@ -141,11 +142,11 @@ No explanations, no comments, just the JSON array.
 
   let notion: any = null;
   try {
-    notion = await uploadTransactionsToNotion(transactions);
+    notion = await uploadTransactionsToNotion(transactions, sharedBy);
   } catch (e) {
     notion = { error: (e as Error).message };
   }
-  return c.json({ transactions, notion });
+  return c.json({ transactions, notion, sharedBy });
 });
 
 // Plain utility to upload transaction objects to Notion (columns: Name, Price, Date)
@@ -161,7 +162,8 @@ interface TransactionRecord {
 }
 
 async function uploadTransactionsToNotion(
-  transactions: TransactionRecord | TransactionRecord[]
+  transactions: TransactionRecord | TransactionRecord[],
+  sharedBy: number = 1
 ) {
   const NOTION_TOKEN = process.env.notion_API_KEY || process.env.NOTION_API_KEY;
   const DATABASE_ID = process.env.Database_ID || process.env.DATABASE_ID;
@@ -189,7 +191,10 @@ async function uploadTransactionsToNotion(
           Name: { title: [{ text: { content: name.slice(0, 2000) } }] },
         },
       };
-      if (amountVal !== null) payload.properties.Price = { number: amountVal };
+      if (amountVal !== null) {
+        const perPersonAmount = Math.round((amountVal / sharedBy) * 100) / 100;
+        payload.properties.Price = { number: perPersonAmount };
+      }
       if (dateStr) payload.properties.Date = { date: { start: dateStr } };
       if (raw.notes) payload.properties.Notes = { rich_text: [{ text: { content: String(raw.notes).slice(0, 2000) } }] };
       
