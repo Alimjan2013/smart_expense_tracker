@@ -56,7 +56,7 @@ app.get("/", async (c) => {
       { role: "system", content: systemPrompt },
       { role: "user", content: userText },
     ],
-    "openai/gpt-5-mini"
+    "openai/gpt-5-nano"
   );
   return c.json(parsed);
 });
@@ -92,7 +92,8 @@ app.post("/", async (c) => {
 - time: Transaction date (use ISO format: YYYY-MM-DD, or closest match if only partial date available)
 - amount: Positive number as a string (e.g., "25.50" not "-25.50")
 - currency: Currency code (e.g., "SEK", "EUR", "USD")
-- purpose: Description of the expense (what was purchased or paid for)
+- purpose: Short category name (e.g., "Uber Eats", "Coffee Shop", "Groceries", "Gas Station")
+- notes: Additional details if available (e.g., restaurant name, store location, order details, card used)
 
 # Instructions:
 1. Read the OCR text carefully and identify which transactions are expenses
@@ -102,13 +103,13 @@ app.post("/", async (c) => {
 5. If the OCR text is unreadable or contains no expenses, return an empty array: []
 
 # Output Format:
-Return ONLY a JSON array. Each expense is an object with: time, amount, currency, purpose.
+Return ONLY a JSON array. Each expense is an object with: time, amount, currency, purpose, notes.
 No explanations, no comments, just the JSON array.
 
 # Example Output:
 [
-  {"time": "2025-12-05", "amount": "742.52", "currency": "SEK", "purpose": "Uber Eats"},
-  {"time": "2025-12-04", "amount": "150.00", "currency": "EUR", "purpose": "Coffee Shop"}
+  {"time": "2025-12-05", "amount": "742.52", "currency": "SEK", "purpose": "Uber Eats", "notes": "McDonald's delivery, paid with Visa ending 4532"},
+  {"time": "2025-12-04", "amount": "150.00", "currency": "EUR", "purpose": "Coffee Shop", "notes": "Starbucks Central Station"}
 ]`;
   const parsed = await chatJSON(
     [
@@ -155,6 +156,7 @@ interface TransactionRecord {
   currency?: string;
   purpose?: string;
   name?: string;
+  notes?: string | null;
   [k: string]: any;
 }
 
@@ -189,6 +191,8 @@ async function uploadTransactionsToNotion(
       };
       if (amountVal !== null) payload.properties.Price = { number: amountVal };
       if (dateStr) payload.properties.Date = { date: { start: dateStr } };
+      if (raw.notes) payload.properties.Notes = { rich_text: [{ text: { content: String(raw.notes).slice(0, 2000) } }] };
+      
       const notionResponse = await fetch("https://api.notion.com/v1/pages", {
         method: "POST",
         headers: {
