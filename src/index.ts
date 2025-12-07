@@ -92,8 +92,8 @@ app.post("/", async (c) => {
 - time: Transaction date (use ISO format: YYYY-MM-DD, or closest match if only partial date available)
 - amount: Positive number as a string (e.g., "25.50" not "-25.50")
 - currency: Currency code (e.g., "SEK", "EUR", "USD")
-- purpose: Short category name (e.g., "Uber Eats", "Coffee Shop", "Groceries", "Gas Station")
-- notes: Additional details if available (e.g., restaurant name, store location, order details, card used)
+- purpose: Store/merchant name with category (e.g., "K market Groceries", "Uber Eats Food Delivery", "Shell Gas Station", "Starbucks Coffee")
+- notes: Additional details in English if available (e.g., location, order details, item description). Do NOT include card/payment details.
 
 # Instructions:
 1. Read the OCR text carefully and identify which transactions are expenses
@@ -108,8 +108,8 @@ No explanations, no comments, just the JSON array.
 
 # Example Output:
 [
-  {"time": "2025-12-05", "amount": "742.52", "currency": "SEK", "purpose": "Uber Eats", "notes": "McDonald's delivery, paid with Visa ending 4532"},
-  {"time": "2025-12-04", "amount": "150.00", "currency": "EUR", "purpose": "Coffee Shop", "notes": "Starbucks Central Station"}
+  {"time": "2025-12-05", "amount": "742.52", "currency": "SEK", "purpose": "Uber Eats Food Delivery", "notes": "McDonald's order"},
+  {"time": "2025-12-04", "amount": "150.00", "currency": "EUR", "purpose": "K market Groceries", "notes": "Groceries : Milk, Bread, Eggs, etc."}
 ]`;
   const parsed = await chatJSON(
     [
